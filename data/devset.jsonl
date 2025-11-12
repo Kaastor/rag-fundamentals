@@ -1,0 +1,30 @@
+{"id": "q1", "question": "How do I install Frobnicator?", "answer": "Use pip install frobnicator and configure ~/.frob/config.yaml before first use.", "citations": ["install.md"]}
+{"id": "q2", "question": "Where is the configuration file stored?", "answer": "In your home directory at ~/.frob/config.yaml.", "citations": ["install.md", "faq.md"]}
+{"id": "q3", "question": "What parameters does frobnicate take?", "answer": "It accepts text (string) and level (integer 1–5, default 3).", "citations": ["api.md"]}
+{"id": "q4", "question": "What does frobnicate return?", "answer": "A JSON object with result and confidence.", "citations": ["api.md"]}
+{"id": "q5", "question": "How do I fix AUTH_MISSING?", "answer": "Create the config and set api_key.", "citations": ["troubleshooting.md", "install.md"]}
+{"id": "q6", "question": "How can I improve performance?", "answer": "Lower level or use batch mode.", "citations": ["troubleshooting.md"]}
+{"id": "q7", "question": "Should I put secrets in prompts?", "answer": "No. Never include secrets in prompts; mask keys using FROB_***.", "citations": ["security.md"]}
+{"id": "q8", "question": "Does the system store user data?", "answer": "No, it stores no user data by default.", "citations": ["security.md"]}
+{"id": "q9", "question": "Does Frobnicator work offline?", "answer": "Yes, core features work offline; cloud features require a key.", "citations": ["faq.md"]}
+{"id": "q10", "question": "What is the default level value?", "answer": "The default level is 3.", "citations": ["api.md", "faq.md"]}
+{"id": "q11", "question": "Where do I set the API key?", "answer": "In ~/.frob/config.yaml under api_key.", "citations": ["install.md"]}
+{"id": "q12", "question": "How do I reduce cost and latency jointly?", "answer": "Lower the level parameter and consider batch mode.", "citations": ["troubleshooting.md"]}
+{"id": "q13", "question": "Which error indicates missing credentials?", "answer": "AUTH_MISSING.", "citations": ["troubleshooting.md"]}
+{"id": "q14", "question": "Which error suggests throttling?", "answer": "RATE_LIMIT.", "citations": ["troubleshooting.md"]}
+{"id": "q15", "question": "What’s in the 1.0.0 release?", "answer": "Initial release with frobnicate and batch mode.", "citations": ["changelog.md"]}
+{"id": "q16", "question": "What changed in 1.1.0?", "answer": "Added offline improvements and better error messages.", "citations": ["changelog.md"]}
+{"id": "q17", "question": "Where do I find the CLI config?", "answer": "At ~/.frob/config.yaml.", "citations": ["install.md", "faq.md"]}
+{"id": "q18", "question": "What arguments do I pass to frobnicate?", "answer": "text and level.", "citations": ["api.md"]}
+{"id": "q19", "question": "What does batch mode help with?", "answer": "Improving throughput and performance.", "citations": ["api.md", "troubleshooting.md"]}
+{"id": "q20", "question": "How should I handle secrets?", "answer": "Mask with FROB_*** or avoid including them.", "citations": ["security.md"]}
+{"id": "q21", "question": "Is any data stored by default?", "answer": "No.", "citations": ["security.md"]}
+{"id": "q22", "question": "How should I handle rate limits?", "answer": "Retry with exponential backoff.", "citations": ["troubleshooting.md"]}
+{"id": "q23", "question": "What’s the default for level?", "answer": "3.", "citations": ["api.md"]}
+{"id": "q24", "question": "Where are installation steps written?", "answer": "In Installation.", "citations": ["install.md"]}
+{"id": "q25", "question": "Which file should contain api_key?", "answer": "config.yaml under api_key.", "citations": ["install.md"]}
+{"id": "q26", "question": "How do I reduce latency?", "answer": "Lower level or use batch mode.", "citations": ["troubleshooting.md"]}
+{"id": "q27", "question": "Which document explains common errors?", "answer": "Troubleshooting.", "citations": ["troubleshooting.md"]}
+{"id": "q28", "question": "What env-var prefix should I use for masking?", "answer": "FROB_***.", "citations": ["security.md"]}
+{"id": "q29", "question": "What is the config path again?", "answer": "~/.frob/config.yaml.", "citations": ["install.md", "faq.md"]}
+{"id": "q30", "question": "Where can I read release notes?", "answer": "In the Changelog.", "citations": ["changelog.md"]}
