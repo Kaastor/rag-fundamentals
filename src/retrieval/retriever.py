@@ -38,15 +38,10 @@ class Retriever:
         tok = lambda s: [t for t in s.lower().split()]
         self._tok = tok
 
-        # Optional from-scratch BM25 for learning
+        # BM25 using rank_bm25 library
+        from rank_bm25 import BM25Okapi as _BM25
+        self.bm25 = _BM25([tok(t) for t in self.texts])
         self._bm25_impl = "rank_bm25"
-        if os.getenv("BM25_SCRATCH", "0") == "1":
-            from .bm25_scratch import BM25Okapi as _BM25
-            self.bm25 = _BM25([tok(t) for t in self.texts])
-            self._bm25_impl = "scratch"
-        else:
-            from rank_bm25 import BM25Okapi as _BM25
-            self.bm25 = _BM25([tok(t) for t in self.texts])
 
         # Load index meta if present
         meta_path = INDEX_DIR / "meta.json"
@@ -78,19 +73,3 @@ class Retriever:
             c = self.chunks[int(i)]
             out.append({**c, "bm25": float(scores[int(i)]), "emb": None, "ranker": f"bm25:{self._bm25_impl}"})
         return out
-
-    def hybrid_union(self, q: str, k: int = 4, tie_breaker: str = "bm25") -> List[Dict]:
-        bm = self.topk_bm25(q, k)
-        em = self.topk_embeddings(q, k)
-        by: Dict[str, Dict] = {}
-        for item in bm + em:
-            d = by.get(item["id"], {**item, "bm25": item.get("bm25"), "emb": item.get("emb")})
-            if item.get("bm25") is not None:
-                d["bm25"] = item["bm25"]
-            if item.get("emb") is not None:
-                d["emb"] = item["emb"]
-            by[item["id"]] = d
-        items = list(by.values())
-        key = "bm25" if tie_breaker == "bm25" else "emb"
-        items.sort(key=lambda x: (float("-inf") if x.get(key) is None else x.get(key)), reverse=True)
-        return items[:k]

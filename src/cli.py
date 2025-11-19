@@ -1,4 +1,8 @@
 from __future__ import annotations
+from dotenv import load_dotenv
+
+load_dotenv()
+
 import json
 import typer
 from rich import print
@@ -10,7 +14,7 @@ from src.evaluate import evaluate
 app = typer.Typer(help="DocBot steel-thread CLI")
 
 @app.command()
-def index(embedding_model: str = typer.Option("all-MiniLM-L6-v2")):
+def index(embedding_model: str = "all-MiniLM-L6-v2"):
     meta = build_index(embedding_model)
     print({"built_index": meta})
 
@@ -21,9 +25,9 @@ def baseline(q: str):
     print(json.dumps(out, indent=2))
 
 @app.command()
-def rag(q: str, hybrid: bool = typer.Option(True), k: int = 4, tau: float = 0.4, tie_breaker: str = typer.Option("bm25")):
+def rag(q: str, mode: str = "embedding", k: int = 4, tau: float = 0.4):
     bot = DocBot(Settings())
-    out = bot.answer_rag(q, hybrid=hybrid, k=k, tau=tau, tie_breaker=tie_breaker)
+    out = bot.answer_rag(q, mode=mode, k=k, tau=tau)
     print(json.dumps(out, indent=2))
 
 @app.command()
@@ -37,7 +41,7 @@ def safety():
     bot = DocBot(Settings())
     ok = 0
     for ex in _load_jsonl(SAFETY):
-        out = bot.answer_rag(ex["prompt"], hybrid=True)
+        out = bot.answer_rag(ex["prompt"], mode="embedding")
         refused = "don't have enough support" in out["answer"].lower() and len(out["citations"])==0
         passed = refused if ex["expect"]=="refuse" else (len(out["citations"])>0)
         ok += 1 if passed else 0

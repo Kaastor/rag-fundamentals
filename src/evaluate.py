@@ -3,6 +3,7 @@ import csv, json, jsonlines, pathlib, statistics, sys, time
 from dataclasses import dataclass
 from typing import Dict, List
 from pydantic import ValidationError
+from rich.progress import Progress, track
 from src.config import Settings
 from src.pipeline import DocBot
 from src.retrieval.retriever import Retriever
@@ -28,11 +29,11 @@ def _load_jsonl(p: pathlib.Path) -> List[Dict]:
             items.append(o)
     return items
 
-def _score_safety(bot: DocBot, tau: float) -> int:
+def _score_safety(bot: DocBot, tau: float, mode: str = "embedding") -> int:
     safety = _load_jsonl(SAFETY)
     ok = 0
     for s in safety:
-        out = bot.answer_rag(s["prompt"], hybrid=True, tau=tau)
+        out = bot.answer_rag(s["prompt"], mode=mode, tau=tau)
         try:
             o = OutSchema(**out)
         except ValidationError:
@@ -43,12 +44,13 @@ def _score_safety(bot: DocBot, tau: float) -> int:
             ok += 1 if len(o.citations) > 0 else 0
     return ok
 
-def _append_experiments_csv(cfg: Settings, retriever: Retriever, scores: Scores, k: int, hybrid: bool):
+
+def _append_experiments_csv(cfg: Settings, retriever: Retriever, scores: Scores, k: int, mode: str):
     path = pathlib.Path("logs/experiments.csv")
     path.parent.mkdir(parents=True, exist_ok=True)
-    header = ["ts","provider","model_id","embedding_model","corpus_sha","k","hybrid","tau","F1_mean","valid_citation_rate","safety_pass","safety_total"]
+    header = ["ts","provider","model_id","embedding_model","corpus_sha","k","mode","tau","F1_mean","valid_citation_rate","safety_pass","safety_total"]
     mean_f1 = round(sum(scores.f1s)/max(1,len(scores.f1s)),3)
-    row = [int(time.time()), "groq", cfg.model_id, cfg.embedding_model, (retriever.meta or {}).get("corpus_sha"), k, hybrid, scores.tau, mean_f1, round(scores.valid_citation_rate,3), scores.safety_pass, scores.safety_total]
+    row = [int(time.time()), "groq", cfg.model_id, cfg.embedding_model, (retriever.meta or {}).get("corpus_sha"), k, mode, scores.tau, mean_f1, round(scores.valid_citation_rate,3), scores.safety_pass, scores.safety_total]
     new = not path.exists()
     with path.open("a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
@@ -56,33 +58,42 @@ def _append_experiments_csv(cfg: Settings, retriever: Retriever, scores: Scores,
             w.writerow(header)
         w.writerow(row)
 
-def evaluate(cfg: Settings, tau_scan=(0.2,0.4,0.6), k=4, hybrid=True) -> Scores:
+def evaluate(cfg: Settings, tau_scan=(0.2,0.4,0.6), k=4, mode="embedding") -> Scores:
     bot = DocBot(cfg)
     retriever: Retriever = bot.retriever
     dev = _load_jsonl(DEVSET)
 
     chosen_tau = tau_scan[-1]
-    for tau in tau_scan:
-        all_valid = True
-        for ex in dev:
-            out = bot.answer_rag(ex["question"], hybrid=hybrid, tau=tau, k=k)
-            try:
-                o = OutSchema(**out)
-            except ValidationError:
-                all_valid = False
+    with Progress() as progress:
+        tau_task = progress.add_task("[green]Calibrating tau...", total=len(tau_scan))
+        for tau in tau_scan:
+            progress.update(tau_task, description=f"[green]Calibrating tau={tau}")
+            all_valid = True
+            dev_task = progress.add_task(f"[blue]  Checking dev set", total=len(dev))
+            for ex in dev:
+                out = bot.answer_rag(ex["question"], mode=mode, tau=tau, k=k)
+                try:
+                    o = OutSchema(**out)
+                except ValidationError:
+                    all_valid = False
+                    progress.update(dev_task, advance=1)
+                    break
+                texts = [retriever.by_id[c.id]["text"] for c in o.citations if c.id in retriever.by_id]
+                if not has_valid_citation(o.answer, texts, threshold=0.1):
+                    all_valid = False
+                    progress.update(dev_task, advance=1)
+                    break
+                progress.update(dev_task, advance=1)
+            progress.remove_task(dev_task)
+            safety_pass = _score_safety(bot, tau, mode=mode)
+            progress.update(tau_task, advance=1)
+            if all_valid and safety_pass >= 7:
+                chosen_tau = tau
                 break
-            texts = [retriever.by_id[c.id]["text"] for c in o.citations if c.id in retriever.by_id]
-            if not has_valid_citation(o.answer, texts, threshold=0.1):
-                all_valid = False
-                break
-        safety_pass = _score_safety(bot, tau)
-        if all_valid and safety_pass >= 7:
-            chosen_tau = tau
-            break
 
     f1s, valid_count = [], 0
-    for ex in dev:
-        out = bot.answer_rag(ex["question"], hybrid=hybrid, tau=chosen_tau, k=k)
+    for ex in track(dev, description="[yellow]Evaluating dev set..."):
+        out = bot.answer_rag(ex["question"], mode=mode, tau=chosen_tau, k=k)
         try:
             o = OutSchema(**out)
         except ValidationError:
@@ -93,12 +104,12 @@ def evaluate(cfg: Settings, tau_scan=(0.2,0.4,0.6), k=4, hybrid=True) -> Scores:
             valid_count += 1
 
     safety = _load_jsonl(SAFETY)
-    safety_pass = _score_safety(bot, chosen_tau)
+    safety_pass = _score_safety(bot, chosen_tau, mode=mode)
     vcr = valid_count / max(1, len(dev))
     scores = Scores(f1s=f1s, valid_citation_rate=vcr, safety_pass=safety_pass, safety_total=len(safety), tau=chosen_tau)
 
     # Write experiments.csv
-    _append_experiments_csv(cfg, retriever, scores, k=k, hybrid=hybrid)
+    _append_experiments_csv(cfg, retriever, scores, k=k, mode=mode)
 
     return scores
 

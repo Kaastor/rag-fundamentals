@@ -28,11 +28,15 @@ class DocBot:
             payload = {"answer":"I don't have enough support to answer.","citations":[],"confidence":0.0}
         return payload
 
-    def answer_rag(self, question: str, hybrid: bool = False, tau: float | None = None, k: int | None = None, tie_breaker: str = "bm25") -> Dict[str, Any]:
+    def answer_rag(self, question: str, mode: str = "embedding", tau: float | None = None, k: int | None = None) -> Dict[str, Any]:
         k = k if k is not None else self.cfg.k
         tau = tau if tau is not None else self.cfg.tau
 
-        contexts = self.retriever.hybrid_union(question, k, tie_breaker) if hybrid else self.retriever.topk_embeddings(question, k)
+        if mode == "bm25":
+            contexts = self.retriever.topk_bm25(question, k)
+        else:
+            contexts = self.retriever.topk_embeddings(question, k)
+            
         prompt = _render_prompt(question, contexts)
         res = self.client.generate_json(prompt)
         try:
@@ -53,4 +57,4 @@ class DocBot:
 
 def answer(msg: str) -> Dict[str, Any]:
     bot = DocBot(Settings())
-    return bot.answer_rag(msg, hybrid=True)
+    return bot.answer_rag(msg, mode="embedding")
