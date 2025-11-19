@@ -1,8 +1,8 @@
 [tool.poetry]
-name = "rag-fundamentals"
+name = "steel-thread-docbot"
 version = "0.1.0"
-description = "Minimal end-to-end RAG slice: CLI + FAISS/BM25 retrieval + eval + safety."
-authors = ["You <czuba.przemyslaw@gmail.com>"]
+description = "Minimal end-to-end RAG slice for labs: CLI + FAISS/BM25 retrieval + eval + safety."
+authors = ["You <you@example.com>"]
 readme = "README.md"
 packages = [{ include = "src" }]
 
@@ -16,9 +16,11 @@ rank-bm25 = "^0.2.2"
 numpy = "^2.1.0"
 jinja2 = "^3.1.4"
 pydantic = "^2.8.2"
-typer = "^0.12.5"
+typer = "0.12.5"
+click = "8.1.7"
 jsonlines = "^4.0.0"
 rich = "^13.8.0"
+python-dotenv = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.2"
